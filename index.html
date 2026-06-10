@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yoga Stamp Tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f0f6ff; min-height: 100vh; padding: 20px; }
+  h1 { text-align: center; font-size: 22px; font-weight: 600; color: #1a5fa8; margin-bottom: 4px; }
+  .subtitle { text-align: center; font-size: 13px; color: #6a9fd8; margin-bottom: 20px; }
+  .top-bar { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+  .top-bar select { padding: 7px 14px; border-radius: 20px; border: 1.5px solid #a8cff0; background: #fff; color: #1a5fa8; font-size: 14px; cursor: pointer; font-weight: 500; }
+  .top-bar button { padding: 7px 14px; border-radius: 20px; border: 1.5px solid #a8cff0; background: #1a5fa8; color: #fff; font-size: 14px; cursor: pointer; font-weight: 500; }
+  .top-bar button:hover { background: #154e8e; }
+  .top-bar .btn-settings { background: #fff8dc; color: #a07800; border-color: #f0d060; }
+  .top-bar .btn-settings:hover { background: #fff0a0; }
+  .card { background: #fff; border-radius: 20px; box-shadow: 0 4px 24px rgba(26,95,168,0.10); max-width: 460px; margin: 0 auto 20px; padding: 24px 24px 20px; }
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+  .card-title { font-size: 17px; font-weight: 700; color: #1a5fa8; }
+  .card-dates { font-size: 12px; color: #6a9fd8; margin-bottom: 16px; }
+  .stamps-grid { display: grid; gap: 10px 14px; justify-content: center; margin-bottom: 18px; }
+  .stamp-wrap { display: flex; flex-direction: column; align-items: center; position: relative; padding-bottom: 20px; }
+  .stamp-slot { width: 68px; height: 68px; border-radius: 50%; border: 2.5px dashed #a8cff0; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; background: #f0f8ff; position: relative; }
+  .stamp-slot:hover { border-color: #1a5fa8; background: #e0f0ff; }
+  .stamp-slot.stamped { border: 2.5px solid #f0c800; background: #fffbe0; }
+  .stamp-slot.stamped:hover { background: #fff5b0; }
+  .stamp-emoji { font-size: 34px; line-height: 1; pointer-events: none; }
+  .stamp-num { font-size: 12px; color: #a8cff0; font-weight: 600; pointer-events: none; }
+  .stamp-date-label { font-size: 9px; color: #6a9fd8; white-space: nowrap; font-weight: 500; margin-top: 5px; min-height: 12px; text-align: center; }
+  .edit-btn { position: absolute; top: -4px; right: -4px; width: 20px; height: 20px; border-radius: 50%; background: #1a5fa8; border: none; cursor: pointer; display: none; align-items: center; justify-content: center; font-size: 10px; color: #fff; z-index: 2; padding: 0; }
+  .stamp-wrap:hover .edit-btn { display: flex; }
+  .stats-row { display: flex; gap: 10px; justify-content: center; margin-bottom: 14px; }
+  .stat { background: #f0f8ff; border-radius: 12px; padding: 10px 18px; text-align: center; flex: 1; }
+  .stat-num { font-size: 22px; font-weight: 700; color: #1a5fa8; }
+  .stat-label { font-size: 11px; color: #6a9fd8; margin-top: 2px; }
+  .progress-bar-wrap { background: #dceeff; border-radius: 8px; height: 8px; margin-bottom: 14px; overflow: hidden; }
+  .progress-bar { background: linear-gradient(90deg, #f0c800, #1a5fa8); height: 100%; border-radius: 8px; transition: width 0.4s; }
+  .action-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .btn { padding: 8px 18px; border-radius: 20px; border: 1.5px solid #a8cff0; background: #fff; color: #1a5fa8; font-size: 13px; cursor: pointer; font-weight: 500; transition: all 0.15s; }
+  .btn:hover { background: #e8f4ff; }
+  .btn.danger { border-color: #f0a0b0; color: #c04060; }
+  .btn.danger:hover { background: #fff0f3; }
+  .btn.primary { background: #1a5fa8; color: #fff; border-color: #1a5fa8; }
+  .btn.primary:hover { background: #154e8e; }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(20,60,120,0.22); z-index: 100; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #fff; border-radius: 20px; padding: 28px 28px 22px; width: 300px; max-width: 96vw; box-shadow: 0 8px 40px rgba(26,95,168,0.18); }
+  .modal h2 { font-size: 17px; font-weight: 700; color: #1a5fa8; margin-bottom: 16px; }
+  .modal label { font-size: 13px; color: #1a5fa8; font-weight: 600; display: block; margin-bottom: 4px; margin-top: 12px; }
+  .modal input { width: 100%; padding: 8px 12px; border-radius: 10px; border: 1.5px solid #a8cff0; font-size: 14px; color: #1a3a6a; background: #f0f8ff; }
+  .modal-btns { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+  .history-section { max-width: 460px; margin: 0 auto; }
+  .history-section h2 { font-size: 15px; font-weight: 700; color: #1a5fa8; margin-bottom: 10px; }
+  .history-row { background: #fff; border-radius: 12px; padding: 12px 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #dceeff; }
+  .history-name { font-size: 14px; font-weight: 600; color: #1a3a6a; }
+  .history-sub { font-size: 11px; color: #6a9fd8; margin-top: 2px; }
+  .history-badge { background: #fff8dc; color: #a07800; border: 1px solid #f0d060; border-radius: 10px; padding: 4px 12px; font-size: 13px; font-weight: 700; }
+  .empty { text-align: center; color: #6a9fd8; font-size: 14px; padding: 30px 0; }
+  .sheet-info { background: #f0f8ff; border-radius: 12px; padding: 14px; font-size: 13px; color: #1a3a6a; line-height: 1.6; }
+  .sheet-info code { background: #dceeff; padding: 2px 6px; border-radius: 6px; font-size: 12px; font-family: monospace; }
+  .gs-status { font-size: 12px; padding: 6px 12px; border-radius: 10px; display: inline-block; margin-top: 8px; }
+  .gs-ok { background: #e6f5e0; color: #2e7d32; }
+  .gs-err { background: #fff0f3; color: #c04060; }
+  .gs-loading { background: #f0f8ff; color: #1a5fa8; }
+  #syncStatus { text-align: center; font-size: 12px; min-height: 20px; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+
+<h1>🪷 Yoga Stamp Tracker</h1>
+<p class="subtitle">Track your sessions, celebrate your practice</p>
+
+<div class="top-bar">
+  <select id="monthSelect" onchange="loadMonth()"></select>
+  <button onclick="openNewMonth()">+ New ticket</button>
+  <button class="btn-settings" onclick="openSheetModal()">⚙ Google Sheets</button>
+</div>
+
+<div id="syncStatus"></div>
+<div id="mainCard" class="card" style="display:none;"></div>
+<div id="noCard" class="empty" style="display:none;">No ticket yet.<br>Click <b>+ New ticket</b> to start!</div>
+
+<div class="history-section" style="margin-top:10px;">
+  <h2>📋 All tickets</h2>
+  <div id="historyList"></div>
+</div>
+
+<!-- New/Edit ticket modal -->
+<div class="modal-overlay" id="newMonthModal">
+  <div class="modal" style="width:340px;">
+    <h2 id="modalTitle">New ticket</h2>
+    <label>Ticket name</label>
+    <input type="text" id="mName" placeholder="June 2026">
+    <label>Sessions on ticket</label>
+    <input type="number" id="mSessions" value="8" min="1" max="30">
+    <label>Start date</label>
+    <input type="date" id="mStart">
+    <label>End date</label>
+    <input type="date" id="mEnd">
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal('newMonthModal')">Cancel</button>
+      <button class="btn primary" onclick="saveMonth()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit stamp date modal -->
+<div class="modal-overlay" id="stampModal">
+  <div class="modal">
+    <h2>🪷 Edit stamp date</h2>
+    <label>Date</label>
+    <input type="date" id="stampDate">
+    <div class="modal-btns">
+      <button class="btn danger" onclick="removeStamp()">Remove</button>
+      <button class="btn" onclick="closeModal('stampModal')">Cancel</button>
+      <button class="btn primary" onclick="confirmStamp()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Google Sheets modal -->
+<div class="modal-overlay" id="sheetModal">
+  <div class="modal" style="width:400px;">
+    <h2>Google Sheets integration</h2>
+    <label>Apps Script webhook URL</label>
+    <input type="text" id="sheetUrl" placeholder="https://script.google.com/macros/s/.../exec" style="margin-bottom:8px;">
+    <div id="gsStatus"></div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal('sheetModal')">Close</button>
+      <button class="btn primary" onclick="saveSheetUrl()">Save URL</button>
+      <button class="btn" onclick="testSheet()">Test connection</button>
+    </div>
+    <div style="margin-top:16px;">
+      <div class="sheet-info">
+        Your Apps Script should use <code>doGet(e)</code> and read <code>e.parameter.payload</code>.<br>
+        Deploy as web app: Execute as <b>Me</b>, Access: <b>Anyone</b>.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let months = JSON.parse(localStorage.getItem('yogaMonths') || '[]');
+let sheetUrl = localStorage.getItem('yogaSheetUrl') || '';
+let editingIdx = null;
+let stampTarget = null;
+
+function save() { localStorage.setItem('yogaMonths', JSON.stringify(months)); }
+function today() { return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }); }
+function formatDate(d) { if (!d) return ''; const [y,m,day] = d.split('-'); return `${day}/${m}/${y}`; }
+
+function setSyncStatus(msg, type) {
+  const el = document.getElementById('syncStatus');
+  const colors = { loading: '#1a5fa8', ok: '#2e7d32', err: '#c04060' };
+  el.style.color = colors[type] || '#1a5fa8';
+  el.textContent = msg;
+  if (type === 'ok' || type === 'err') setTimeout(() => el.textContent = '', 4000);
+}
+
+async function sendToSheet(data) {
+  if (!sheetUrl) return;
+  setSyncStatus('☁ Syncing...', 'loading');
+  const url = sheetUrl + '?payload=' + encodeURIComponent(JSON.stringify(data));
+  try {
+    const res = await fetch(url);
+    const text = await res.text();
+    if (text.includes('ok')) setSyncStatus('✓ Synced to Google Sheets', 'ok');
+    else setSyncStatus('✗ Unexpected response: ' + text, 'err');
+  } catch(e) {
+    setSyncStatus('✗ Sync failed: ' + e.message, 'err');
+  }
+}
+
+function syncData(idx) {
+  const m = months[idx];
+  sendToSheet({ name: m.name, start: m.start||'', end: m.end||'', total: m.sessions, used: m.stamps.filter(Boolean).length, stamps: m.stamps.filter(Boolean) });
+}
+
+function renderSelect() {
+  const sel = document.getElementById('monthSelect');
+  sel.innerHTML = months.length ? months.map((m,i) => `<option value="${i}">${m.name}</option>`).join('') : '<option value="">— no tickets —</option>';
+  if (months.length) sel.value = months.length - 1;
+}
+
+function loadMonth() {
+  const idx = parseInt(document.getElementById('monthSelect').value);
+  const card = document.getElementById('mainCard');
+  const noCard = document.getElementById('noCard');
+  if (isNaN(idx) || !months[idx]) { card.style.display='none'; noCard.style.display='block'; renderHistory(); return; }
+  noCard.style.display = 'none'; card.style.display = 'block';
+  const m = months[idx];
+  const used = m.stamps.filter(Boolean).length;
+  const total = m.sessions;
+  const cols = Math.min(4, total);
+  let slotsHtml = '';
+  for (let i = 0; i < total; i++) {
+    const stamped = m.stamps[i];
+    slotsHtml += `<div class="stamp-wrap">
+      <div class="stamp-slot${stamped?' stamped':''}" onclick="tapStamp(${idx},${i})">
+        ${stamped ? `<span class="stamp-emoji">🪷</span>` : `<span class="stamp-num">${i+1}</span>`}
+      </div>
+      ${stamped ? `<button class="edit-btn" onclick="openEditStamp(event,${idx},${i})">✏</button>` : ''}
+      <div class="stamp-date-label">${stamped ? formatDate(stamped) : ''}</div>
+    </div>`;
+  }
+  card.innerHTML = `
+    <div class="card-header">
+      <div><div class="card-title">${m.name}</div>
+      <div class="card-dates">${m.start ? formatDate(m.start)+' → '+formatDate(m.end) : 'No dates set'}</div></div>
+      <button class="btn" onclick="editMonth(${idx})" style="font-size:12px;padding:5px 12px;">✏ Edit</button>
+    </div>
+    <div class="stamps-grid" style="grid-template-columns:repeat(${cols},68px);">${slotsHtml}</div>
+    <div class="stats-row">
+      <div class="stat"><div class="stat-num">${used}</div><div class="stat-label">Used</div></div>
+      <div class="stat"><div class="stat-num">${total-used}</div><div class="stat-label">Remaining</div></div>
+      <div class="stat"><div class="stat-num">${total}</div><div class="stat-label">Total</div></div>
+    </div>
+    <div class="progress-bar-wrap"><div class="progress-bar" style="width:${Math.round(used/total*100)}%"></div></div>
+    <div class="action-row">
+      <button class="btn danger" onclick="deleteMonth(${idx})">🗑 Delete</button>
+      <button class="btn primary" onclick="syncData(${idx})">☁ Sync to Sheets</button>
+    </div>`;
+  renderHistory();
+}
+
+function tapStamp(mIdx, slotIdx) {
+  if (months[mIdx].stamps[slotIdx]) return;
+  months[mIdx].stamps[slotIdx] = today();
+  save(); loadMonth(); syncData(mIdx);
+}
+
+function openEditStamp(e, mIdx, slotIdx) {
+  e.stopPropagation();
+  stampTarget = { mIdx, slotIdx };
+  document.getElementById('stampDate').value = months[mIdx].stamps[slotIdx] || today();
+  document.getElementById('stampModal').classList.add('open');
+}
+
+function confirmStamp() {
+  const { mIdx, slotIdx } = stampTarget;
+  const date = document.getElementById('stampDate').value;
+  if (!date) return;
+  months[mIdx].stamps[slotIdx] = date;
+  save(); closeModal('stampModal'); loadMonth(); syncData(mIdx);
+}
+
+function removeStamp() {
+  const { mIdx, slotIdx } = stampTarget;
+  months[mIdx].stamps[slotIdx] = null;
+  save(); closeModal('stampModal'); loadMonth(); syncData(mIdx);
+}
+
+function openNewMonth() {
+  editingIdx = null;
+  document.getElementById('modalTitle').textContent = 'New ticket';
+  const now = new Date(); const y = now.getFullYear(), mo = now.getMonth();
+  document.getElementById('mName').value = `${now.toLocaleString('default',{month:'long'})} ${y}`;
+  document.getElementById('mSessions').value = 8;
+  document.getElementById('mStart').value = new Date(y,mo,1).toISOString().split('T')[0];
+  document.getElementById('mEnd').value = new Date(y,mo+1,0).toISOString().split('T')[0];
+  document.getElementById('newMonthModal').classList.add('open');
+}
+
+function editMonth(idx) {
+  editingIdx = idx;
+  const m = months[idx];
+  document.getElementById('modalTitle').textContent = 'Edit ticket';
+  document.getElementById('mName').value = m.name;
+  document.getElementById('mSessions').value = m.sessions;
+  document.getElementById('mStart').value = m.start;
+  document.getElementById('mEnd').value = m.end;
+  document.getElementById('newMonthModal').classList.add('open');
+}
+
+function saveMonth() {
+  const name = document.getElementById('mName').value.trim() || 'Unnamed';
+  const sessions = Math.max(1, parseInt(document.getElementById('mSessions').value)||8);
+  const start = document.getElementById('mStart').value;
+  const end = document.getElementById('mEnd').value;
+  if (editingIdx !== null) {
+    const old = months[editingIdx];
+    const newStamps = Array(sessions).fill(null);
+    old.stamps.slice(0,sessions).forEach((s,i) => newStamps[i]=s);
+    months[editingIdx] = { name, sessions, start, end, stamps: newStamps };
+  } else {
+    months.push({ name, sessions, start, end, stamps: Array(sessions).fill(null) });
+  }
+  save(); closeModal('newMonthModal'); renderSelect();
+  document.getElementById('monthSelect').value = editingIdx!==null ? editingIdx : months.length-1;
+  loadMonth();
+}
+
+function deleteMonth(idx) {
+  if (!confirm(`Delete "${months[idx].name}"?`)) return;
+  months.splice(idx,1); save(); renderSelect(); loadMonth();
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (!months.length) { list.innerHTML='<div class="empty">No tickets yet.</div>'; return; }
+  list.innerHTML = [...months].reverse().map(m => {
+    const used = m.stamps.filter(Boolean).length;
+    return `<div class="history-row">
+      <div><div class="history-name">${m.name}</div>
+      <div class="history-sub">${m.start?formatDate(m.start)+' → '+formatDate(m.end):'No dates'} · ${m.sessions} sessions</div></div>
+      <div class="history-badge">${used}/${m.sessions}</div>
+    </div>`;
+  }).join('');
+}
+
+function openSheetModal() {
+  document.getElementById('sheetUrl').value = sheetUrl;
+  document.getElementById('gsStatus').innerHTML = '';
+  document.getElementById('sheetModal').classList.add('open');
+}
+function saveSheetUrl() {
+  sheetUrl = document.getElementById('sheetUrl').value.trim();
+  localStorage.setItem('yogaSheetUrl', sheetUrl);
+  document.getElementById('gsStatus').innerHTML = '<span class="gs-status gs-ok">URL saved!</span>';
+  loadMonth();
+}
+async function testSheet() {
+  document.getElementById('gsStatus').innerHTML='<span class="gs-status gs-loading">Sending test row...</span>';
+  await sendToSheet({name:'Test',start:'',end:'',total:0,used:0,stamps:[]});
+}
+
+renderSelect();
+if (months.length) { document.getElementById('monthSelect').value=months.length-1; loadMonth(); }
+else { document.getElementById('noCard').style.display='block'; renderHistory(); }
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+</script>
+</body>
+</html>
